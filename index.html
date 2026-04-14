@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thomasino Casino</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <a href="index.html" class="navbar-brand">
+      <span class="logo-icon">🎰</span>
+      THOMASINO
+    </a>
+    <div class="navbar-right">
+      <div class="balance-display">
+        <span class="coin-icon">💰</span>
+        <span id="balance-amount" class="balance-amount">0.00</span>
+        <span style="color: var(--text-muted);">€</span>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="openDepositModal()">Einzahlen</button>
+    </div>
+  </nav>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-section-title">Menü</div>
+      <ul class="sidebar-nav">
+        <li><a href="index.html" class="active"><span class="nav-icon">🏠</span>Lobby</a></li>
+        <li><a href="games/slots.html"><span class="nav-icon">🎰</span>Slots</a></li>
+        <li><a href="games/blackjack.html"><span class="nav-icon">🃏</span>Blackjack</a></li>
+        <li><a href="games/roulette.html"><span class="nav-icon">🎡</span>Roulette</a></li>
+        <li><a href="games/dice.html"><span class="nav-icon">🎲</span>Dice</a></li>
+        <li><a href="games/mines.html"><span class="nav-icon">💎</span>Mines</a></li>
+      </ul>
+    </aside>
+
+    <main class="main-content">
+      <div class="hero-banner">
+        <h1>Willkommen bei <span>Thomasino</span> 🎰</h1>
+        <p>Dein Online Casino mit Spielgeld. Viel Spaß beim Spielen!</p>
+      </div>
+
+      <div class="section-header">
+        <h2><span class="icon">🎮</span> Unsere Spiele</h2>
+      </div>
+
+      <div class="games-grid">
+        <a href="games/slots.html" class="game-card">
+          <div class="game-card-img">🎰</div>
+          <div class="game-card-body">
+            <h3>Slots</h3>
+            <p>Dreh die Walzen und gewinne!</p>
+          </div>
+        </a>
+
+        <a href="games/blackjack.html" class="game-card">
+          <div class="game-card-img">🃏</div>
+          <div class="game-card-body">
+            <h3>Blackjack</h3>
+            <p>Schlage den Dealer mit 21!</p>
+          </div>
+        </a>
+
+        <a href="games/roulette.html" class="game-card">
+          <div class="game-card-img">🎡</div>
+          <div class="game-card-body">
+            <h3>Roulette</h3>
+            <p>Setze auf deine Glückszahl!</p>
+          </div>
+        </a>
+
+        <a href="games/dice.html" class="game-card">
+          <div class="game-card-img">🎲</div>
+          <div class="game-card-body">
+            <h3>Dice</h3>
+            <p>Würfle über oder unter dem Ziel!</p>
+          </div>
+        </a>
+
+        <a href="games/mines.html" class="game-card">
+          <div class="game-card-img">💎</div>
+          <div class="game-card-body">
+            <h3>Mines</h3>
+            <p>Finde Diamanten, meide Minen!</p>
+          </div>
+        </a>
+      </div>
+
+      <div class="footer">
+        <p>Thomasino Casino &copy; 2026 — Nur Spielgeld, kein echtes Geld.</p>
+      </div>
+    </main>
+  </div>
+
+  <!-- Deposit Modal -->
+  <div class="modal-overlay" id="deposit-modal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeDepositModal()">&times;</button>
+      <h2>💰 Spielgeld einzahlen</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 16px;">Wähle einen Betrag zum Einzahlen:</p>
+      <div class="deposit-amounts">
+        <button onclick="depositAmount(1000)">+1.000 €</button>
+        <button onclick="depositAmount(5000)">+5.000 €</button>
+        <button onclick="depositAmount(10000)">+10.000 €</button>
+        <button onclick="depositAmount(50000)">+50.000 €</button>
+      </div>
+      <button class="btn btn-secondary" style="width:100%; margin-top:12px;" onclick="Balance.reset(); closeDepositModal();">Zurücksetzen (10.000 €)</button>
+    </div>
+  </div>
+
+  <script src="js/balance.js"></script>
+  <script src="js/ui.js"></script>
+</body>
+</html>

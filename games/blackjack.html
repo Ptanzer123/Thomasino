@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blackjack - Thomasino Casino</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <a href="../index.html" class="navbar-brand">
+      <span class="logo-icon">🎰</span>
+      THOMASINO
+    </a>
+    <div class="navbar-right">
+      <div class="balance-display">
+        <span class="coin-icon">💰</span>
+        <span id="balance-amount" class="balance-amount">0.00</span>
+        <span style="color: var(--text-muted);">€</span>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="openDepositModal()">Einzahlen</button>
+    </div>
+  </nav>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-section-title">Menü</div>
+      <ul class="sidebar-nav">
+        <li><a href="../index.html"><span class="nav-icon">🏠</span>Lobby</a></li>
+        <li><a href="slots.html"><span class="nav-icon">🎰</span>Slots</a></li>
+        <li><a href="blackjack.html" class="active"><span class="nav-icon">🃏</span>Blackjack</a></li>
+        <li><a href="roulette.html"><span class="nav-icon">🎡</span>Roulette</a></li>
+        <li><a href="dice.html"><span class="nav-icon">🎲</span>Dice</a></li>
+        <li><a href="mines.html"><span class="nav-icon">💎</span>Mines</a></li>
+      </ul>
+    </aside>
+
+    <main class="main-content">
+      <div class="game-container">
+        <div class="game-header">
+          <a href="../index.html" class="back-btn">← Zurück</a>
+          <h1>🃏 Blackjack</h1>
+        </div>
+
+        <div class="game-area">
+          <div>
+            <div class="hand-label">Dealer</div>
+            <div class="card-hand" id="dealer-hand"></div>
+            <div class="hand-value" id="dealer-value"></div>
+          </div>
+
+          <hr style="border-color: var(--border-color); margin: 24px 0;">
+
+          <div>
+            <div class="hand-label">Deine Hand</div>
+            <div class="card-hand" id="player-hand"></div>
+            <div class="hand-value" id="player-value"></div>
+          </div>
+
+          <div class="bj-actions" id="bj-actions" style="display:none;">
+            <button class="btn btn-green" onclick="bjHit()">Karte ziehen</button>
+            <button class="btn btn-red" onclick="bjStand()">Halten</button>
+          </div>
+
+          <div id="bj-result"></div>
+        </div>
+
+        <div class="game-controls">
+          <div class="control-group">
+            <label>Einsatz (€)</label>
+            <input type="number" id="bj-bet" min="1" value="100" step="10">
+            <div class="bet-shortcuts">
+              <button class="btn btn-secondary btn-sm" onclick="document.getElementById('bj-bet').value = 10">10</button>
+              <button class="btn btn-secondary btn-sm" onclick="document.getElementById('bj-bet').value = 50">50</button>
+              <button class="btn btn-secondary btn-sm" onclick="document.getElementById('bj-bet').value = 100">100</button>
+              <button class="btn btn-secondary btn-sm" onclick="document.getElementById('bj-bet').value = 500">500</button>
+              <button class="btn btn-secondary btn-sm" onclick="document.getElementById('bj-bet').value = 1000">1K</button>
+            </div>
+          </div>
+          <button class="btn btn-primary" style="width:100%; font-size:1.1rem; padding:14px;" id="deal-btn" onclick="bjDeal()">
+            🃏 AUSTEILEN
+          </button>
+        </div>
+      </div>
+
+      <div class="footer">
+        <p>Thomasino Casino &copy; 2026 — Nur Spielgeld, kein echtes Geld.</p>
+      </div>
+    </main>
+  </div>
+
+  <!-- Deposit Modal -->
+  <div class="modal-overlay" id="deposit-modal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeDepositModal()">&times;</button>
+      <h2>💰 Spielgeld einzahlen</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 16px;">Wähle einen Betrag zum Einzahlen:</p>
+      <div class="deposit-amounts">
+        <button onclick="depositAmount(1000)">+1.000 €</button>
+        <button onclick="depositAmount(5000)">+5.000 €</button>
+        <button onclick="depositAmount(10000)">+10.000 €</button>
+        <button onclick="depositAmount(50000)">+50.000 €</button>
+      </div>
+      <button class="btn btn-secondary" style="width:100%; margin-top:12px;" onclick="Balance.reset(); closeDepositModal();">Zurücksetzen (10.000 €)</button>
+    </div>
+  </div>
+
+  <script src="../js/balance.js"></script>
+  <script src="../js/ui.js"></script>
+  <script>
+    const SUITS = ['♠', '♥', '♦', '♣'];
+    const VALUES = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+
+    let deck = [];
+    let playerHand = [];
+    let dealerHand = [];
+    let currentBet = 0;
+    let gameActive = false;
+
+    function createDeck() {
+      deck = [];
+      for (const suit of SUITS) {
+        for (const value of VALUES) {
+          deck.push({ suit, value });
+        }
+      }
+      // Shuffle
+      for (let i = deck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [deck[i], deck[j]] = [deck[j], deck[i]];
+      }
+    }
+
+    function cardValue(card) {
+      if (card.value === 'A') return 11;
+      if (['K', 'Q', 'J'].includes(card.value)) return 10;
+      return parseInt(card.value);
+    }
+
+    function handValue(hand) {
+      let total = 0;
+      let aces = 0;
+      for (const card of hand) {
+        total += cardValue(card);
+        if (card.value === 'A') aces++;
+      }
+      while (total > 21 && aces > 0) {
+        total -= 10;
+        aces--;
+      }
+      return total;
+    }
+
+    function renderCard(card, facedown) {
+      if (facedown) {
+        return '<div class="playing-card card-facedown"></div>';
+      }
+      const isRed = card.suit === '♥' || card.suit === '♦';
+      return `<div class="playing-card ${isRed ? 'red' : 'black'}">
+        <span class="card-value">${card.value}</span>
+        <span class="card-suit">${card.suit}</span>
+      </div>`;
+    }
+
+    function renderHands(revealDealer) {
+      const playerEl = document.getElementById('player-hand');
+      const dealerEl = document.getElementById('dealer-hand');
+      const playerVal = document.getElementById('player-value');
+      const dealerVal = document.getElementById('dealer-value');
+
+      playerEl.innerHTML = playerHand.map(c => renderCard(c, false)).join('');
+      playerVal.textContent = handValue(playerHand);
+
+      if (revealDealer) {
+        dealerEl.innerHTML = dealerHand.map(c => renderCard(c, false)).join('');
+        dealerVal.textContent = handValue(dealerHand);
+      } else {
+        dealerEl.innerHTML = renderCard(dealerHand[0], false) + renderCard(dealerHand[1], true);
+        dealerVal.textContent = cardValue(dealerHand[0]);
+      }
+    }
+
+    function bjDeal() {
+      const bet = parseFloat(document.getElementById('bj-bet').value);
+      if (isNaN(bet) || bet <= 0) return;
+      if (!Balance.canAfford(bet)) {
+        document.getElementById('bj-result').innerHTML =
+          '<div class="result-message result-lose">Nicht genug Spielgeld! 💸</div>';
+        return;
+      }
+
+      Balance.subtract(bet);
+      currentBet = bet;
+      gameActive = true;
+
+      createDeck();
+      playerHand = [deck.pop(), deck.pop()];
+      dealerHand = [deck.pop(), deck.pop()];
+
+      document.getElementById('bj-result').innerHTML = '';
+      document.getElementById('bj-actions').style.display = 'flex';
+      document.getElementById('deal-btn').disabled = true;
+
+      renderHands(false);
+
+      // Check for natural blackjack
+      if (handValue(playerHand) === 21) {
+        bjStand();
+      }
+    }
+
+    function bjHit() {
+      if (!gameActive) return;
+      playerHand.push(deck.pop());
+      renderHands(false);
+
+      if (handValue(playerHand) > 21) {
+        endGame('bust');
+      } else if (handValue(playerHand) === 21) {
+        bjStand();
+      }
+    }
+
+    function bjStand() {
+      if (!gameActive) return;
+      gameActive = false;
+
+      // Dealer draws
+      while (handValue(dealerHand) < 17) {
+        dealerHand.push(deck.pop());
+      }
+
+      renderHands(true);
+
+      const pVal = handValue(playerHand);
+      const dVal = handValue(dealerHand);
+
+      if (pVal > 21) {
+        endGame('bust');
+      } else if (dVal > 21) {
+        endGame('dealer-bust');
+      } else if (pVal > dVal) {
+        endGame('win');
+      } else if (pVal < dVal) {
+        endGame('lose');
+      } else {
+        endGame('push');
+      }
+    }
+
+    function endGame(result) {
+      gameActive = false;
+      document.getElementById('bj-actions').style.display = 'none';
+      document.getElementById('deal-btn').disabled = false;
+      renderHands(true);
+
+      const resultDiv = document.getElementById('bj-result');
+      const pVal = handValue(playerHand);
+
+      switch (result) {
+        case 'bust':
+          resultDiv.innerHTML = `<div class="result-message result-lose">💥 Bust! Du hast ${pVal} — Verloren! -${Balance.format(currentBet)} €</div>`;
+          break;
+        case 'dealer-bust':
+          Balance.add(currentBet * 2);
+          resultDiv.innerHTML = `<div class="result-message result-win">🎉 Dealer Bust! Du gewinnst +${Balance.format(currentBet)} €</div>`;
+          break;
+        case 'win':
+          const isBlackjack = playerHand.length === 2 && pVal === 21;
+          const multiplier = isBlackjack ? 2.5 : 2;
+          Balance.add(currentBet * multiplier);
+          const winAmount = currentBet * (multiplier - 1);
+          const label = isBlackjack ? '🃏 BLACKJACK!' : '🎉 Gewonnen!';
+          resultDiv.innerHTML = `<div class="result-message result-win">${label} +${Balance.format(winAmount)} €</div>`;
+          break;
+        case 'lose':
+          resultDiv.innerHTML = `<div class="result-message result-lose">😞 Verloren! -${Balance.format(currentBet)} €</div>`;
+          break;
+        case 'push':
+          Balance.add(currentBet);
+          resultDiv.innerHTML = `<div class="result-message result-push">🤝 Unentschieden! Einsatz zurück.</div>`;
+          break;
+      }
+    }
+  </script>
+</body>
+</html>

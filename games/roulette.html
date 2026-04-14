@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roulette - Thomasino Casino</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <a href="../index.html" class="navbar-brand">
+      <span class="logo-icon">🎰</span>
+      THOMASINO
+    </a>
+    <div class="navbar-right">
+      <div class="balance-display">
+        <span class="coin-icon">💰</span>
+        <span id="balance-amount" class="balance-amount">0.00</span>
+        <span style="color: var(--text-muted);">€</span>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="openDepositModal()">Einzahlen</button>
+    </div>
+  </nav>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-section-title">Menü</div>
+      <ul class="sidebar-nav">
+        <li><a href="../index.html"><span class="nav-icon">🏠</span>Lobby</a></li>
+        <li><a href="slots.html"><span class="nav-icon">🎰</span>Slots</a></li>
+        <li><a href="blackjack.html"><span class="nav-icon">🃏</span>Blackjack</a></li>
+        <li><a href="roulette.html" class="active"><span class="nav-icon">🎡</span>Roulette</a></li>
+        <li><a href="dice.html"><span class="nav-icon">🎲</span>Dice</a></li>
+        <li><a href="mines.html"><span class="nav-icon">💎</span>Mines</a></li>
+      </ul>
+    </aside>
+
+    <main class="main-content">
+      <div class="game-container">
+        <div class="game-header">
+          <a href="../index.html" class="back-btn">← Zurück</a>
+          <h1>🎡 Roulette</h1>
+        </div>
+
+        <div class="game-area">
+          <div class="roulette-pointer">▼</div>
+          <div class="roulette-wheel" id="roulette-wheel">
+            <div class="roulette-center" id="roulette-number">—</div>
+          </div>
+
+          <div style="margin-top: 24px;">
+            <label style="font-size:0.8rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1px;">Wette wählen:</label>
+            <div class="roulette-bets">
+              <button class="roulette-bet-btn red-btn" onclick="selectBet('red')" id="bet-red">🔴 Rot</button>
+              <button class="roulette-bet-btn black-btn" onclick="selectBet('black')" id="bet-black">⚫ Schwarz</button>
+              <button class="roulette-bet-btn green-btn" onclick="selectBet('green')" id="bet-green">🟢 Grün (0)</button>
+              <button class="roulette-bet-btn" onclick="selectBet('odd')" id="bet-odd">Ungerade</button>
+              <button class="roulette-bet-btn" onclick="selectBet('even')" id="bet-even">Gerade</button>
+              <button class="roulette-bet-btn" onclick="selectBet('1-18')" id="bet-1-18">1–18</button>
+              <button class="roulette-bet-btn" onclick="selectBet('19-36')" id="bet-19-36">19–36</button>
+            </div>
+          </div>
+
+          <div id="roulette-result"></div>
+        </div>
+
+        <div class="game-controls">
+          <div class="control-group">
+            <label>Einsatz (€)</label>
+            <input type="number" id="roulette-bet" min="1" value="100" step="10">
+            <div class="bet-shortcuts">
+              <button class="btn btn-secondary btn-sm" onclick="document.getElementById('roulette-bet').value = 10">10</button>
+              <button class="btn btn-secondary btn-sm" onclick="document.getElementById('roulette-bet').value = 50">50</button>
+              <button class="btn btn-secondary btn-sm" onclick="document.getElementById('roulette-bet').value = 100">100</button>
+              <button class="btn btn-secondary btn-sm" onclick="document.getElementById('roulette-bet').value = 500">500</button>
+              <button class="btn btn-secondary btn-sm" onclick="document.getElementById('roulette-bet').value = 1000">1K</button>
+            </div>
+          </div>
+          <button class="btn btn-primary" style="width:100%; font-size:1.1rem; padding:14px;" id="roulette-spin-btn" onclick="spinRoulette()">
+            🎡 DREHEN
+          </button>
+        </div>
+      </div>
+
+      <div class="footer">
+        <p>Thomasino Casino &copy; 2026 — Nur Spielgeld, kein echtes Geld.</p>
+      </div>
+    </main>
+  </div>
+
+  <!-- Deposit Modal -->
+  <div class="modal-overlay" id="deposit-modal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeDepositModal()">&times;</button>
+      <h2>💰 Spielgeld einzahlen</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 16px;">Wähle einen Betrag zum Einzahlen:</p>
+      <div class="deposit-amounts">
+        <button onclick="depositAmount(1000)">+1.000 €</button>
+        <button onclick="depositAmount(5000)">+5.000 €</button>
+        <button onclick="depositAmount(10000)">+10.000 €</button>
+        <button onclick="depositAmount(50000)">+50.000 €</button>
+      </div>
+      <button class="btn btn-secondary" style="width:100%; margin-top:12px;" onclick="Balance.reset(); closeDepositModal();">Zurücksetzen (10.000 €)</button>
+    </div>
+  </div>
+
+  <script src="../js/balance.js"></script>
+  <script src="../js/ui.js"></script>
+  <script>
+    const RED_NUMBERS = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
+    const BLACK_NUMBERS = [2,4,6,8,10,11,13,15,17,20,22,24,26,28,29,31,33,35];
+
+    let selectedBet = null;
+    let isSpinning = false;
+
+    function selectBet(type) {
+      selectedBet = type;
+      document.querySelectorAll('.roulette-bet-btn').forEach(btn => btn.classList.remove('selected'));
+      document.getElementById('bet-' + type).classList.add('selected');
+    }
+
+    function getColor(num) {
+      if (num === 0) return 'green';
+      return RED_NUMBERS.includes(num) ? 'red' : 'black';
+    }
+
+    function spinRoulette() {
+      if (isSpinning) return;
+      if (!selectedBet) {
+        document.getElementById('roulette-result').innerHTML =
+          '<div class="result-message result-push">Bitte wähle zuerst eine Wette!</div>';
+        return;
+      }
+
+      const bet = parseFloat(document.getElementById('roulette-bet').value);
+      if (isNaN(bet) || bet <= 0) return;
+      if (!Balance.canAfford(bet)) {
+        document.getElementById('roulette-result').innerHTML =
+          '<div class="result-message result-lose">Nicht genug Spielgeld! 💸</div>';
+        return;
+      }
+
+      Balance.subtract(bet);
+      isSpinning = true;
+      document.getElementById('roulette-spin-btn').disabled = true;
+      document.getElementById('roulette-result').innerHTML = '';
+
+      const result = Math.floor(Math.random() * 37); // 0–36
+      const wheel = document.getElementById('roulette-wheel');
+      const centerEl = document.getElementById('roulette-number');
+
+      // Spin animation
+      const spins = 5 + Math.random() * 3;
+      const degrees = spins * 360 + (result / 37) * 360;
+      wheel.style.transform = `rotate(${degrees}deg)`;
+
+      centerEl.textContent = '...';
+
+      setTimeout(() => {
+        const color = getColor(result);
+        centerEl.textContent = result;
+        centerEl.style.color = color === 'red' ? 'var(--red)' : color === 'green' ? 'var(--green)' : 'var(--text-primary)';
+
+        checkRouletteResult(result, color, bet);
+
+        isSpinning = false;
+        document.getElementById('roulette-spin-btn').disabled = false;
+      }, 3200);
+    }
+
+    function checkRouletteResult(number, color, bet) {
+      const resultDiv = document.getElementById('roulette-result');
+      let won = false;
+      let multiplier = 2;
+
+      switch (selectedBet) {
+        case 'red': won = color === 'red'; break;
+        case 'black': won = color === 'black'; break;
+        case 'green': won = color === 'green'; multiplier = 36; break;
+        case 'odd': won = number > 0 && number % 2 !== 0; break;
+        case 'even': won = number > 0 && number % 2 === 0; break;
+        case '1-18': won = number >= 1 && number <= 18; break;
+        case '19-36': won = number >= 19 && number <= 36; break;
+      }
+
+      const colorEmoji = color === 'red' ? '🔴' : color === 'green' ? '🟢' : '⚫';
+
+      if (won) {
+        const winnings = bet * multiplier;
+        Balance.add(winnings);
+        const profit = winnings - bet;
+        resultDiv.innerHTML = `<div class="result-message result-win">🎉 ${colorEmoji} ${number} — Gewonnen! +${Balance.format(profit)} € (x${multiplier})</div>`;
+      } else {
+        resultDiv.innerHTML = `<div class="result-message result-lose">😞 ${colorEmoji} ${number} — Verloren! -${Balance.format(bet)} €</div>`;
+      }
+    }
+  </script>
+</body>
+</html>
