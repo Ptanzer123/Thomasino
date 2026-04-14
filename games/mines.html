@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mines - Thomasino Casino</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <a href="../index.html" class="navbar-brand">
+      <span class="logo-icon">🎰</span>
+      THOMASINO
+    </a>
+    <div class="navbar-right">
+      <div class="balance-display">
+        <span class="coin-icon">💰</span>
+        <span id="balance-amount" class="balance-amount">0.00</span>
+        <span style="color: var(--text-muted);">€</span>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="openDepositModal()">Einzahlen</button>
+    </div>
+  </nav>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-section-title">Menü</div>
+      <ul class="sidebar-nav">
+        <li><a href="../index.html"><span class="nav-icon">🏠</span>Lobby</a></li>
+        <li><a href="slots.html"><span class="nav-icon">🎰</span>Slots</a></li>
+        <li><a href="blackjack.html"><span class="nav-icon">🃏</span>Blackjack</a></li>
+        <li><a href="roulette.html"><span class="nav-icon">🎡</span>Roulette</a></li>
+        <li><a href="dice.html"><span class="nav-icon">🎲</span>Dice</a></li>
+        <li><a href="mines.html" class="active"><span class="nav-icon">💎</span>Mines</a></li>
+      </ul>
+    </aside>
+
+    <main class="main-content">
+      <div class="game-container">
+        <div class="game-header">
+          <a href="../index.html" class="back-btn">← Zurück</a>
+          <h1>💎 Mines</h1>
+        </div>
+
+        <div class="game-area">
+          <div class="mines-info">
+            <div class="mines-info-item">
+              <label>Multiplikator</label>
+              <span id="mines-multiplier">1.00x</span>
+            </div>
+            <div class="mines-info-item">
+              <label>Gewinn</label>
+              <span id="mines-profit">0.00 €</span>
+            </div>
+            <div class="mines-info-item">
+              <label>Gefunden</label>
+              <span id="mines-found">0 💎</span>
+            </div>
+          </div>
+
+          <div class="mines-grid" id="mines-grid"></div>
+
+          <div id="mines-result"></div>
+        </div>
+
+        <div class="game-controls">
+          <div class="control-group">
+            <label>Einsatz (€)</label>
+            <input type="number" id="mines-bet" min="1" value="100" step="10">
+            <div class="bet-shortcuts">
+              <button class="btn btn-secondary btn-sm" onclick="document.getElementById('mines-bet').value = 10">10</button>
+              <button class="btn btn-secondary btn-sm" onclick="document.getElementById('mines-bet').value = 50">50</button>
+              <button class="btn btn-secondary btn-sm" onclick="document.getElementById('mines-bet').value = 100">100</button>
+              <button class="btn btn-secondary btn-sm" onclick="document.getElementById('mines-bet').value = 500">500</button>
+              <button class="btn btn-secondary btn-sm" onclick="document.getElementById('mines-bet').value = 1000">1K</button>
+            </div>
+          </div>
+          <div class="control-group">
+            <label>Anzahl Minen</label>
+            <input type="number" id="mines-count" min="1" max="24" value="5">
+          </div>
+          <button class="btn btn-primary" style="width:100%; font-size:1.1rem; padding:14px;" id="mines-start-btn" onclick="startMines()">
+            💎 STARTEN
+          </button>
+          <button class="btn btn-green" style="width:100%; font-size:1.1rem; padding:14px; margin-top:8px; display:none;" id="mines-cashout-btn" onclick="cashoutMines()">
+            💰 AUSZAHLEN
+          </button>
+        </div>
+      </div>
+
+      <div class="footer">
+        <p>Thomasino Casino &copy; 2026 — Nur Spielgeld, kein echtes Geld.</p>
+      </div>
+    </main>
+  </div>
+
+  <!-- Deposit Modal -->
+  <div class="modal-overlay" id="deposit-modal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeDepositModal()">&times;</button>
+      <h2>💰 Spielgeld einzahlen</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 16px;">Wähle einen Betrag zum Einzahlen:</p>
+      <div class="deposit-amounts">
+        <button onclick="depositAmount(1000)">+1.000 €</button>
+        <button onclick="depositAmount(5000)">+5.000 €</button>
+        <button onclick="depositAmount(10000)">+10.000 €</button>
+        <button onclick="depositAmount(50000)">+50.000 €</button>
+      </div>
+      <button class="btn btn-secondary" style="width:100%; margin-top:12px;" onclick="Balance.reset(); closeDepositModal();">Zurücksetzen (10.000 €)</button>
+    </div>
+  </div>
+
+  <script src="../js/balance.js"></script>
+  <script src="../js/ui.js"></script>
+  <script>
+    const GRID_SIZE = 25; // 5x5
+    let minePositions = [];
+    let revealed = [];
+    let gameActive = false;
+    let currentBet = 0;
+    let gemsFound = 0;
+    let mineCount = 5;
+
+    function initGrid() {
+      const grid = document.getElementById('mines-grid');
+      grid.innerHTML = '';
+      for (let i = 0; i < GRID_SIZE; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'mine-cell';
+        cell.dataset.index = i;
+        cell.onclick = () => revealCell(i);
+        grid.appendChild(cell);
+      }
+    }
+
+    function calculateMultiplier(gems, mines) {
+      // Fair multiplier calculation with house edge
+      let multiplier = 1;
+      const totalCells = GRID_SIZE;
+      const safeCells = totalCells - mines;
+      for (let i = 0; i < gems; i++) {
+        multiplier *= (totalCells - i) / (safeCells - i);
+      }
+      return multiplier * 0.97; // 3% house edge
+    }
+
+    function startMines() {
+      const bet = parseFloat(document.getElementById('mines-bet').value);
+      mineCount = parseInt(document.getElementById('mines-count').value);
+
+      if (isNaN(bet) || bet <= 0) return;
+      if (mineCount < 1 || mineCount > 24) {
+        document.getElementById('mines-result').innerHTML =
+          '<div class="result-message result-push">Minen müssen zwischen 1 und 24 sein!</div>';
+        return;
+      }
+      if (!Balance.canAfford(bet)) {
+        document.getElementById('mines-result').innerHTML =
+          '<div class="result-message result-lose">Nicht genug Spielgeld! 💸</div>';
+        return;
+      }
+
+      Balance.subtract(bet);
+      currentBet = bet;
+      gameActive = true;
+      gemsFound = 0;
+      revealed = new Array(GRID_SIZE).fill(false);
+
+      // Place mines randomly
+      minePositions = [];
+      while (minePositions.length < mineCount) {
+        const pos = Math.floor(Math.random() * GRID_SIZE);
+        if (!minePositions.includes(pos)) {
+          minePositions.push(pos);
+        }
+      }
+
+      initGrid();
+      document.getElementById('mines-result').innerHTML = '';
+      document.getElementById('mines-start-btn').style.display = 'none';
+      document.getElementById('mines-cashout-btn').style.display = 'block';
+      document.getElementById('mines-bet').disabled = true;
+      document.getElementById('mines-count').disabled = true;
+
+      updateMinesInfo();
+    }
+
+    function revealCell(index) {
+      if (!gameActive || revealed[index]) return;
+
+      revealed[index] = true;
+      const cells = document.querySelectorAll('.mine-cell');
+      const cell = cells[index];
+
+      if (minePositions.includes(index)) {
+        // Hit a mine!
+        cell.classList.add('revealed', 'mine');
+        cell.textContent = '💣';
+        gameOver(false);
+      } else {
+        // Found a gem!
+        cell.classList.add('revealed', 'gem');
+        cell.textContent = '💎';
+        gemsFound++;
+        updateMinesInfo();
+      }
+    }
+
+    function updateMinesInfo() {
+      const multiplier = gemsFound > 0 ? calculateMultiplier(gemsFound, mineCount) : 1;
+      const profit = currentBet * multiplier - currentBet;
+
+      document.getElementById('mines-multiplier').textContent = multiplier.toFixed(2) + 'x';
+      document.getElementById('mines-profit').textContent = Balance.format(Math.max(0, profit)) + ' €';
+      document.getElementById('mines-found').textContent = gemsFound + ' 💎';
+
+      // Check if all gems found
+      if (gemsFound === GRID_SIZE - mineCount) {
+        cashoutMines();
+      }
+    }
+
+    function cashoutMines() {
+      if (!gameActive || gemsFound === 0) return;
+
+      const multiplier = calculateMultiplier(gemsFound, mineCount);
+      const winnings = currentBet * multiplier;
+      Balance.add(winnings);
+
+      const profit = winnings - currentBet;
+      document.getElementById('mines-result').innerHTML =
+        `<div class="result-message result-win">💰 Ausgezahlt! +${Balance.format(profit)} € (x${multiplier.toFixed(2)})</div>`;
+
+      revealAll();
+      endMinesGame();
+    }
+
+    function gameOver(won) {
+      if (!won) {
+        document.getElementById('mines-result').innerHTML =
+          `<div class="result-message result-lose">💥 MINE! Verloren! -${Balance.format(currentBet)} €</div>`;
+      }
+      revealAll();
+      endMinesGame();
+    }
+
+    function revealAll() {
+      const cells = document.querySelectorAll('.mine-cell');
+      cells.forEach((cell, i) => {
+        if (!revealed[i]) {
+          if (minePositions.includes(i)) {
+            cell.classList.add('revealed', 'mine');
+            cell.textContent = '💣';
+          } else {
+            cell.classList.add('revealed', 'gem');
+            cell.textContent = '💎';
+            cell.style.opacity = '0.4';
+          }
+        }
+      });
+    }
+
+    function endMinesGame() {
+      gameActive = false;
+      document.getElementById('mines-start-btn').style.display = 'block';
+      document.getElementById('mines-cashout-btn').style.display = 'none';
+      document.getElementById('mines-bet').disabled = false;
+      document.getElementById('mines-count').disabled = false;
+    }
+
+    // Initialize empty grid
+    initGrid();
+  </script>
+</body>
+</html>
